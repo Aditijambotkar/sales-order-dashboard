@@ -172,7 +172,7 @@ if uploaded_file:
                            color_discrete_sequence=[COLOR_PRIMARY]),
                     use_container_width=True)
 
-    top_customers_qty = clean_df.groupby('Customer_Name')['PO_Qty'].sum().nlargest(10).reset_index()
+    top_customers_qty = df.groupby('Customer_Name')['PO_Qty'].sum().nlargest(10).reset_index()
     st.plotly_chart(px.bar(top_customers_qty, x='Customer_Name', y='PO_Qty',
                            title="Top 10 Customers by Quantity", text_auto=True,
                            color_discrete_sequence=[COLOR_SECONDARY]),
@@ -184,7 +184,7 @@ if uploaded_file:
                            color_discrete_sequence=[COLOR_WARNING]),
                     use_container_width=True)
 
-    top_products_val = clean_df.groupby('Product_Name')['PO_Value'].sum().nlargest(10).reset_index()
+    top_products_val = df.groupby('Product_Name')['PO_Value'].sum().nlargest(10).reset_index()
     st.plotly_chart(px.bar(top_products_val, x='Product_Name', y='PO_Value',
                            title="Top 10 Products by Value", text_auto=True,
                            color_discrete_sequence=[COLOR_PURPLE]),
@@ -349,3 +349,4 @@ if uploaded_file:
     )
 
   
+
