@@ -148,7 +148,7 @@ if uploaded_file:
                             color_discrete_sequence=[COLOR_PRIMARY]),
                     use_container_width=True)
 
-    quarterly_sales = clean_df.groupby('Order_Quarter')['PO_Value'].sum().reset_index()
+    quarterly_sales = df.groupby('Order_Quarter')['PO_Value'].sum().reset_index()
     st.plotly_chart(px.bar(quarterly_sales, x='Order_Quarter', y='PO_Value',
                            title="Quarterly Sales Value", text_auto=True,
                            color_discrete_sequence=[COLOR_SECONDARY]),
@@ -349,4 +349,5 @@ if uploaded_file:
     )
 
   
+
 
