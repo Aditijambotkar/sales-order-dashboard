@@ -166,7 +166,7 @@ if uploaded_file:
                             color_discrete_sequence=[COLOR_WARNING]),
                     use_container_width=True)
 
-    top_customers = clean_df.groupby('Customer_Name')['PO_Value'].sum().nlargest(10).reset_index()
+    top_customers = df.groupby('Customer_Name')['PO_Value'].sum().nlargest(10).reset_index()
     st.plotly_chart(px.bar(top_customers, x='Customer_Name', y='PO_Value',
                            title="Top 10 Customers by Value", text_auto=True,
                            color_discrete_sequence=[COLOR_PRIMARY]),
@@ -349,3 +349,4 @@ if uploaded_file:
     )
 
   
+
