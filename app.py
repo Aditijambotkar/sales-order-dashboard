@@ -184,7 +184,7 @@ if uploaded_file:
                            color_discrete_sequence=[COLOR_WARNING]),
                     use_container_width=True)
 
-    top_products_val = df.groupby('Product_Name')['PO_Value'].sum().nlargest(10).reset_index()
+    top_products_val = clean_df.groupby('Product_Name')['PO_Value'].sum().nlargest(10).reset_index()
     st.plotly_chart(px.bar(top_products_val, x='Product_Name', y='PO_Value',
                            title="Top 10 Products by Value", text_auto=True,
                            color_discrete_sequence=[COLOR_PURPLE]),
@@ -349,5 +349,3 @@ if uploaded_file:
     )
 
   
-
-
