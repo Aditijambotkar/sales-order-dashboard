@@ -191,11 +191,21 @@ if uploaded_file:
                             title="Sales Growth % (MoM)", markers=True),
                     use_container_width=True)
 
-    lead_time_month = clean_df.groupby('Order_Month')['Lead_Time'].mean().reset_index()
-    st.plotly_chart(px.line(lead_time_month, x='Order_Month',
-                            y='Lead_Time',
-                            title="Average Lead Time Trend", markers=True),
-                    use_container_width=True)
+    
+lead_time_month = clean_df.groupby('Order_Month')['Lead_Time'].mean().reset_index()
+
+st.plotly_chart(
+    px.line(
+        lead_time_month,
+        x='Order_Month',
+        y='Lead_Time',
+        markers=True,
+        title="Average Lead Time by Month",
+        color_discrete_sequence=["#1f77b4"]
+    ),
+    use_container_width=True
+)
+
 
     st.plotly_chart(lead_time_month = clean_df.groupby('Order_Month')['Lead_Time'].mean().reset_index()
 
@@ -284,4 +294,5 @@ st.plotly_chart(
 
 else:
     st.info("Please upload your Excel file to start analysis.")
+
 
