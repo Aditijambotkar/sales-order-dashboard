@@ -349,6 +349,86 @@ if uploaded_file:
         use_container_width=True
     )
 
+    # ===============================
+# PRODUCT DEMAND ANALYTICS SECTION
+# ===============================
+
+st.header("Product Demand & Seasonality Analysis")
+
+# --------------------------------
+# 1️⃣ Product-wise Demand Trend
+# --------------------------------
+st.subheader("Product-wise Demand Trend")
+
+product_trend = clean_df.groupby(
+    ['Order_Month', 'Product_Name']
+)['Ordered_Qty'].sum().reset_index()
+
+fig_product_trend = px.line(
+    product_trend,
+    x='Order_Month',
+    y='Ordered_Qty',
+    color='Product_Name',
+    markers=True,
+    title="Monthly Demand Trend by Product"
+)
+
+st.plotly_chart(fig_product_trend, use_container_width=True)
+
+
+# --------------------------------
+# 2️⃣ Seasonality Heatmap
+# --------------------------------
+st.subheader("Seasonality Analysis (Heatmap)")
+
+seasonality = clean_df.groupby(
+    ['Order_Month', 'Product_Name']
+)['Ordered_Qty'].sum().reset_index()
+
+season_pivot = seasonality.pivot(
+    index='Product_Name',
+    columns='Order_Month',
+    values='Ordered_Qty'
+).fillna(0)
+
+fig_season = px.imshow(
+    season_pivot,
+    aspect="auto",
+    title="Product Seasonality Heatmap"
+)
+
+st.plotly_chart(fig_season, use_container_width=True)
+
+
+# --------------------------------
+# 3️⃣ Slow-moving vs Fast-moving
+# --------------------------------
+st.subheader("Slow-moving vs Fast-moving Products")
+
+product_speed = clean_df.groupby(
+    'Product_Name'
+)['Ordered_Qty'].sum().reset_index()
+
+avg_demand = product_speed['Ordered_Qty'].mean()
+
+product_speed['Category'] = product_speed['Ordered_Qty'].apply(
+    lambda x: 'Fast Moving' if x > avg_demand else 'Slow Moving'
+)
+
+fig_speed = px.bar(
+    product_speed.sort_values('Ordered_Qty', ascending=False),
+    x='Product_Name',
+    y='Ordered_Qty',
+    color='Category',
+    title="Fast vs Slow Moving Products"
+)
+
+st.plotly_chart(fig_speed, use_container_width=True)
+
+# ===============================
+
+
 else:
     st.info("Please upload your Excel file to start analysis.")
+
 
