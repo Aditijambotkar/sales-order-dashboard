@@ -106,8 +106,8 @@ if uploaded_file:
     # ======================================================
     # KPI SECTION
     # ======================================================
-    total_sales = round(clean_df['PO_Value'].sum(),2)
-    total_orders = clean_df['So_No'].nunique()
+    total_sales = round(df['PO_Value'].sum(),2)
+    total_orders = df['So_No'].nunique()
     avg_lead_time = round(clean_df['Lead_Time'].mean(),1)
     on_time_perc = round(clean_df['Delivery_Status'].value_counts(normalize=True).get('On-Time',0)*100,1)
 
@@ -115,7 +115,7 @@ if uploaded_file:
     top_20perc_customers_value = round(top_customers_20perc[:int(len(top_customers_20perc)*0.2)].sum(),2)
     total_value = clean_df['PO_Value'].sum()
 
-    pending_value = clean_df[clean_df['Order_Status']=='Open']['PO_Value'].sum()
+    pending_value = df[df['Order_Status']=='Open']['PO_Value'].sum()
 
     col1,col2,col3,col4,col5 = st.columns(5)
     col1.metric("Total Sales", f"{total_sales:,.0f}")
@@ -197,10 +197,20 @@ if uploaded_file:
                             title="Average Lead Time Trend", markers=True),
                     use_container_width=True)
 
-    st.plotly_chart(px.box(clean_df, x='Order_Month',
-                           y='Lead_Time',
-                           title="Lead Time Distribution by Month"),
-                    use_container_width=True)
+    st.plotly_chart(lead_time_month = clean_df.groupby('Order_Month')['Lead_Time'].mean().reset_index()
+
+st.plotly_chart(
+    px.line(
+        lead_time_month,
+        x='Order_Month',
+        y='Lead_Time',
+        markers=True,
+        title="Average Lead Time by Month",
+        color_discrete_sequence=["#1f77b4"]
+    ),
+    use_container_width=True
+)
+)
 
     st.plotly_chart(px.pie(clean_df, names='Delivery_Status',
                            title="On-Time vs Delayed Orders"),
@@ -274,3 +284,4 @@ if uploaded_file:
 
 else:
     st.info("Please upload your Excel file to start analysis.")
+
