@@ -300,6 +300,55 @@ if uploaded_file:
                                      title="Delivery Delay Distribution",
                                      color_discrete_sequence=[COLOR_WARNING]),
                         use_container_width=True)
+            # ======================================================
+    # 7️⃣ CAPACITY & PLANNING SUPPORT (OPERATIONS VIEW)
+    # ======================================================
+
+    st.subheader("🏭 Capacity & Planning Support (Operations View)")
+
+    # ------------------------------------------------------
+    # 1️⃣ Expected Load by Month (Total Quantity)
+    # ------------------------------------------------------
+    monthly_load = clean_df.groupby('Order_Month')['PO_Qty'].sum().reset_index()
+
+    st.plotly_chart(
+        px.bar(
+            monthly_load,
+            x='Order_Month',
+            y='PO_Qty',
+            title="Expected Production Load by Month (Total Ordered Quantity)",
+            text_auto=True,
+            color_discrete_sequence=["#1f77b4"]
+        ),
+        use_container_width=True
+    )
+
+    # ------------------------------------------------------
+    # 2️⃣ Peak Demand Periods
+    # ------------------------------------------------------
+    peak_months = monthly_load.sort_values(by='PO_Qty', ascending=False).head(3)
+
+    st.write("### 🔥 Top 3 Peak Demand Months")
+    st.dataframe(peak_months, use_container_width=True)
+
+    # ------------------------------------------------------
+    # 3️⃣ Product-wise Capacity Requirement
+    # ------------------------------------------------------
+    product_capacity = clean_df.groupby('Product_Name')['PO_Qty'].sum().reset_index()
+    product_capacity = product_capacity.sort_values(by='PO_Qty', ascending=False)
+
+    st.plotly_chart(
+        px.bar(
+            product_capacity.head(15),
+            x='Product_Name',
+            y='PO_Qty',
+            title="Product-wise Capacity Requirement (Top 15)",
+            text_auto=True,
+            color_discrete_sequence=["#2ca02c"]
+        ),
+        use_container_width=True
+    )
 
 else:
     st.info("Please upload your Excel file to start analysis.")
+
