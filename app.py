@@ -214,7 +214,7 @@ st.plotly_chart(
     ),
     use_container_width=True
 )
-)
+
 
     st.plotly_chart(px.pie(clean_df, names='Delivery_Status',
                            title="On-Time vs Delayed Orders"),
@@ -288,6 +288,7 @@ st.plotly_chart(
 
 else:
     st.info("Please upload your Excel file to start analysis.")
+
 
 
 
