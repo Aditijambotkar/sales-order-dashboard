@@ -348,85 +348,85 @@ if uploaded_file:
         use_container_width=True
     )
 
-    # ===============================
-# PRODUCT DEMAND ANALYTICS SECTION
-# ===============================
+   # =====================================
+# PRODUCT DEMAND & SEASONALITY SECTION
+# =====================================
 
-st.header("Product Demand & Seasonality Analysis")
+st.header("📈 Product Demand & Seasonality Analysis")
 
-# --------------------------------
-# 1️⃣ Product-wise Demand Trend
-# --------------------------------
-st.subheader("Product-wise Demand Trend")
+# -------- Detect Quantity Column Automatically --------
+qty_column = None
+for col in clean_df.columns:
+    if "qty" in col.lower():
+        qty_column = col
+        break
 
-product_trend = clean_df.groupby(
-    ['Order_Month', 'Product_Name']
-)['Ordered_Qty'].sum().reset_index()
+if qty_column is None:
+    st.error("No Quantity column found (Expected something like Ordered_Qty / Supplied_Qty)")
+else:
 
-fig_product_trend = px.line(
-    product_trend,
-    x='Order_Month',
-    y='Ordered_Qty',
-    color='Product_Name',
-    markers=True,
-    title="Monthly Demand Trend by Product"
-)
+    # --------------------------------
+    # 1️⃣ Product-wise Demand Trend
+    # --------------------------------
+    st.subheader("Product-wise Demand Trend")
 
-st.plotly_chart(fig_product_trend, use_container_width=True)
+    product_trend = clean_df.groupby(
+        ["Order_Month", "Product_Name"]
+    )[qty_column].sum().reset_index()
 
+    fig_product_trend = px.line(
+        product_trend,
+        x="Order_Month",
+        y=qty_column,
+        color="Product_Name",
+        markers=True,
+        title="Monthly Demand Trend by Product"
+    )
 
-# --------------------------------
-# 2️⃣ Seasonality Heatmap
-# --------------------------------
-st.subheader("Seasonality Analysis (Heatmap)")
+    st.plotly_chart(fig_product_trend, use_container_width=True)
 
-seasonality = clean_df.groupby(
-    ['Order_Month', 'Product_Name']
-)['Ordered_Qty'].sum().reset_index()
+    # --------------------------------
+    # 2️⃣ Seasonality Heatmap
+    # --------------------------------
+    st.subheader("Seasonality Heatmap")
 
-season_pivot = seasonality.pivot(
-    index='Product_Name',
-    columns='Order_Month',
-    values='Ordered_Qty'
-).fillna(0)
+    seasonality = clean_df.groupby(
+        ["Order_Month", "Product_Name"]
+    )[qty_column].sum().reset_index()
 
-fig_season = px.imshow(
-    season_pivot,
-    aspect="auto",
-    title="Product Seasonality Heatmap"
-)
+    season_pivot = seasonality.pivot(
+        index="Product_Name",
+        columns="Order_Month",
+        values=qty_column
+    ).fillna(0)
 
-st.plotly_chart(fig_season, use_container_width=True)
+    fig_season = px.imshow(
+        season_pivot,
+        aspect="auto",
+        title="Product Seasonality"
+    )
 
+    st.plotly_chart(fig_season, use_container_width=True)
 
-# --------------------------------
-# 3️⃣ Slow-moving vs Fast-moving
-# --------------------------------
-st.subheader("Slow-moving vs Fast-moving Products")
+    # --------------------------------
+    # 3️⃣ Slow-moving vs Fast-moving
+    # --------------------------------
+    st.subheader("Slow-moving vs Fast-moving Products")
 
-product_speed = clean_df.groupby(
-    'Product_Name'
-)['Ordered_Qty'].sum().reset_index()
+    product_speed = clean_df.groupby("Product_Name")[qty_column].sum().reset_index()
 
-avg_demand = product_speed['Ordered_Qty'].mean()
+    avg_demand = product_speed[qty_column].mean()
 
-product_speed['Category'] = product_speed['Ordered_Qty'].apply(
-    lambda x: 'Fast Moving' if x > avg_demand else 'Slow Moving'
-)
+    product_speed["Category"] = product_speed[qty_column].apply(
+        lambda x: "Fast Moving" if x > avg_demand else "Slow Moving"
+    )
 
-fig_speed = px.bar(
-    product_speed.sort_values('Ordered_Qty', ascending=False),
-    x='Product_Name',
-    y='Ordered_Qty',
-    color='Category',
-    title="Fast vs Slow Moving Products"
-)
+    fig_speed = px.bar(
+        product_speed.sort_values(qty_column, ascending=False),
+        x="Product_Name",
+        y=qty_column,
+        color="Category",
+        title="Fast vs Slow Moving Products"
+    )
 
-st.plotly_chart(fig_speed, use_container_width=True)
-
-# ===============================
-
-
-
-
-
+    st.plotly_chart(fig_speed, use_container_width=True)
