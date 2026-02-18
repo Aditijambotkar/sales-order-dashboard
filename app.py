@@ -23,7 +23,6 @@ COLOR_WARNING = "#ff7f0e"
 COLOR_PURPLE = "#9467bd"
 
 uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"])
-
 if uploaded_file:
 
     # ======================================================
@@ -427,9 +426,9 @@ st.plotly_chart(fig_speed, use_container_width=True)
 
 # ===============================
 
+else:
+     st.info("Please upload your Excel file to start analysis.")
 
- else:
-    st.info("Please upload your Excel file to start analysis.")
 
 
 
