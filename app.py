@@ -426,8 +426,6 @@ st.plotly_chart(fig_speed, use_container_width=True)
 
 # ===============================
 
-else:
-     st.info("Please upload your Excel file to start analysis.")
 
 
 
