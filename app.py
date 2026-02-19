@@ -62,6 +62,7 @@ if uploaded_file:
 
     for _, row in df.iterrows():
         item_details = str(row.get('Item_Qty_Details', '')).split('\n')
+
         for item in item_details:
             product_name = item.split('|')[0].strip()
 
@@ -81,47 +82,56 @@ if uploaded_file:
     clean_df = pd.DataFrame(expanded_rows)
 
     # ======================================================
-    # PRODUCT LEVEL CALCULATIONS
+    # SAFE DATE CONVERSION
     # ======================================================
-    # ------------------------------
-# Safe Date Conversion
-# ------------------------------
-
     clean_df['Po_Date'] = pd.to_datetime(clean_df['Po_Date'], errors='coerce')
     clean_df['Invoice_Dates'] = pd.to_datetime(clean_df['Invoice_Dates'], errors='coerce')
+    clean_df['Scheduled_Date'] = pd.to_datetime(clean_df['Scheduled_Date'], errors='coerce')
 
-# ------------------------------
-# Lead Time Calculation
-# ------------------------------
-
+    # ======================================================
+    # LEAD TIME CALCULATION (SAFE)
+    # ======================================================
     clean_df['Lead_Time'] = (
         clean_df['Invoice_Dates'] - clean_df['Po_Date']
-          ).dt.days
+    ).dt.days
 
-# Remove invalid lead times
     clean_df = clean_df[clean_df['Lead_Time'].notna()]
     clean_df = clean_df[clean_df['Lead_Time'] >= 0]
 
-    
-    clean_df['Schedule_Delay'] = (clean_df['Invoice_Dates'] - clean_df['Scheduled_Date']).dt.days
+    # ======================================================
+    # SCHEDULE DELAY
+    # ======================================================
+    clean_df['Schedule_Delay'] = (
+        clean_df['Invoice_Dates'] - clean_df['Scheduled_Date']
+    ).dt.days
 
+    # ======================================================
+    # DELIVERY STATUS
+    # ======================================================
     clean_df['Delivery_Status'] = np.where(
-        clean_df['Invoice_Dates'] <= clean_df['Scheduled_Date'],
-        'On-Time', 'Delayed'
+        (clean_df['Invoice_Dates'].notna()) &
+        (clean_df['Scheduled_Date'].notna()) &
+        (clean_df['Invoice_Dates'] <= clean_df['Scheduled_Date']),
+        'On-Time',
+        'Delayed'
     )
 
+    # ======================================================
+    # TIME FIELDS
+    # ======================================================
     clean_df['Order_Month'] = clean_df['Po_Date'].dt.to_period('M').astype(str)
     clean_df['Order_Year'] = clean_df['Po_Date'].dt.year
     clean_df['Order_Quarter'] = clean_df['Po_Date'].dt.to_period('Q').astype(str)
 
     clean_df['Order_Status'] = np.where(
-        clean_df['Invoice_Dates'].notna(), 'Closed', 'Open'
+        clean_df['Invoice_Dates'].notna(),
+        'Closed',
+        'Open'
     )
 
     # ======================================================
     # SAFE REVENUE ALLOCATION (NO DUPLICATION)
     # ======================================================
-
     clean_df['Total_PO_Qty_Per_SO'] = clean_df.groupby('So_No')['PO_Qty'].transform('sum')
 
     clean_df['Allocated_Value'] = np.where(
@@ -133,17 +143,17 @@ if uploaded_file:
     # ======================================================
     # CUSTOMER DORMANCY
     # ======================================================
-
     customer_last_invoice = so_df.groupby('Customer_Name')['Invoice_Dates'].max().reset_index()
     customer_last_invoice.rename(columns={'Invoice_Dates': 'Last_Invoice_Date'}, inplace=True)
 
     so_df = so_df.merge(customer_last_invoice, on='Customer_Name', how='left')
-    so_df['Dormancy_Days'] = (pd.Timestamp.today() - so_df['Last_Invoice_Date']).dt.days
+    so_df['Dormancy_Days'] = (
+        pd.Timestamp.today() - so_df['Last_Invoice_Date']
+    ).dt.days
 
     # ======================================================
     # KPI SECTION
     # ======================================================
-
     total_sales = so_df['PO_Value'].sum()
     total_orders = so_df['So_No'].nunique()
     avg_lead_time = clean_df['Lead_Time'].mean()
@@ -151,7 +161,8 @@ if uploaded_file:
 
     on_time_perc = round(
         clean_df['Delivery_Status'].value_counts(normalize=True)
-        .get('On-Time', 0) * 100, 1)
+        .get('On-Time', 0) * 100, 1
+    )
 
     top_customer_value = so_df.groupby('Customer_Name')['PO_Value'].sum().sort_values(ascending=False)
     top_20_value = top_customer_value.head(max(1, int(len(top_customer_value) * 0.2))).sum()
@@ -163,33 +174,37 @@ if uploaded_file:
     col4.metric("On-Time %", f"{on_time_perc}%")
     col5.metric("Pending Value", f"{pending_value:,.0f}")
 
-    st.write("Top 20% Customer Contribution:",
-             round((top_20_value / total_sales) * 100, 1), "%")
+    if total_sales > 0:
+        st.write("Top 20% Customer Contribution:",
+                 round((top_20_value / total_sales) * 100, 1), "%")
 
     st.divider()
 
     # ======================================================
-    # ALL ORIGINAL CHARTS (EVERYTHING INCLUDED)
+    # ALL CHARTS
     # ======================================================
 
     # Monthly Sales
     monthly_sales = so_df.groupby('Order_Month')['PO_Value'].sum().reset_index()
     st.plotly_chart(px.line(monthly_sales, x='Order_Month', y='PO_Value',
-                            title="Monthly Sales Value Trend", markers=True,
+                            title="Monthly Sales Value Trend",
+                            markers=True,
                             color_discrete_sequence=[COLOR_PRIMARY]),
                     use_container_width=True)
 
     # Monthly SO Count
     monthly_so_count = so_df.groupby('Order_Month')['So_No'].count().reset_index()
     st.plotly_chart(px.line(monthly_so_count, x='Order_Month', y='So_No',
-                            title="Monthly SO Count Trend", markers=True,
+                            title="Monthly SO Count Trend",
+                            markers=True,
                             color_discrete_sequence=[COLOR_PURPLE]),
                     use_container_width=True)
 
     # Average Order Value
     monthly_aov = so_df.groupby('Order_Month')['PO_Value'].mean().reset_index()
     st.plotly_chart(px.line(monthly_aov, x='Order_Month', y='PO_Value',
-                            title="Average Order Value Trend", markers=True,
+                            title="Average Order Value Trend",
+                            markers=True,
                             color_discrete_sequence=[COLOR_WARNING]),
                     use_container_width=True)
 
@@ -197,11 +212,12 @@ if uploaded_file:
     monthly_sales['Sales_Growth_MoM'] = monthly_sales['PO_Value'].pct_change() * 100
     st.plotly_chart(px.line(monthly_sales, x='Order_Month',
                             y='Sales_Growth_MoM',
-                            title="Sales Growth % (MoM)", markers=True,
+                            title="Sales Growth % (MoM)",
+                            markers=True,
                             color_discrete_sequence=[COLOR_PRIMARY]),
                     use_container_width=True)
 
-    # Top Customers by Value
+    # Top 10 Customers by Value
     top_customers = so_df.groupby('Customer_Name')['PO_Value'].sum().nlargest(10).reset_index()
     st.plotly_chart(px.bar(top_customers, x='Customer_Name', y='PO_Value',
                            title="Top 10 Customers by Value",
@@ -209,7 +225,7 @@ if uploaded_file:
                            color_discrete_sequence=[COLOR_PRIMARY]),
                     use_container_width=True)
 
-    # Top Customers by Quantity
+    # Top 10 Customers by Quantity
     top_customers_qty = clean_df.groupby('Customer_Name')['PO_Qty'].sum().nlargest(10).reset_index()
     st.plotly_chart(px.bar(top_customers_qty, x='Customer_Name', y='PO_Qty',
                            title="Top 10 Customers by Quantity",
@@ -217,7 +233,7 @@ if uploaded_file:
                            color_discrete_sequence=[COLOR_SECONDARY]),
                     use_container_width=True)
 
-    # Top Products by Quantity
+    # Top 10 Products by Quantity
     top_products = clean_df.groupby('Product_Name')['PO_Qty'].sum().nlargest(10).reset_index()
     st.plotly_chart(px.bar(top_products, x='Product_Name', y='PO_Qty',
                            title="Top 10 Products by Quantity",
@@ -225,7 +241,7 @@ if uploaded_file:
                            color_discrete_sequence=[COLOR_WARNING]),
                     use_container_width=True)
 
-    # Top Products by Value
+    # Top 10 Products by Value
     top_products_val = clean_df.groupby('Product_Name')['Allocated_Value'].sum().nlargest(10).reset_index()
     st.plotly_chart(px.bar(top_products_val, x='Product_Name', y='Allocated_Value',
                            title="Top 10 Products by Value",
@@ -233,42 +249,50 @@ if uploaded_file:
                            color_discrete_sequence=[COLOR_PURPLE]),
                     use_container_width=True)
 
-    # Customer Contribution
+    # Customer Contribution Pie
     customer_contrib = so_df.groupby('Customer_Name')['PO_Value'].sum().reset_index()
-    st.plotly_chart(px.pie(customer_contrib, values='PO_Value',
+    st.plotly_chart(px.pie(customer_contrib,
+                           values='PO_Value',
                            names='Customer_Name',
                            title="Customer Contribution to Revenue"),
                     use_container_width=True)
 
-    # Region Contribution
+    # Region Contribution Pie
     region_contrib = so_df.groupby('Site_Address')['PO_Value'].sum().reset_index()
-    st.plotly_chart(px.pie(region_contrib, values='PO_Value',
+    st.plotly_chart(px.pie(region_contrib,
+                           values='PO_Value',
                            names='Site_Address',
                            title="Region-wise Contribution to Revenue"),
                     use_container_width=True)
 
-    # Open vs Closed
+    # Open vs Closed Orders
     status_counts = clean_df.groupby('Order_Status')['So_No'].nunique().reset_index()
-    st.plotly_chart(px.bar(status_counts, x='Order_Status', y='So_No',
+    st.plotly_chart(px.bar(status_counts,
+                           x='Order_Status',
+                           y='So_No',
                            title="Open vs Closed Orders",
                            text_auto=True,
                            color_discrete_sequence=[COLOR_WARNING]),
                     use_container_width=True)
 
-    # Aging
+    # Aging Distribution
     open_orders = clean_df[clean_df['Order_Status'] == 'Open'].copy()
     if not open_orders.empty:
-        open_orders['Aging_Days'] = (pd.Timestamp.today() - open_orders['Po_Date']).dt.days
+        open_orders['Aging_Days'] = (
+            pd.Timestamp.today() - open_orders['Po_Date']
+        ).dt.days
         open_orders = open_orders[open_orders['Aging_Days'] >= 0]
 
-        st.plotly_chart(px.histogram(open_orders, x='Aging_Days',
+        st.plotly_chart(px.histogram(open_orders,
+                                     x='Aging_Days',
                                      nbins=20,
                                      title="Aging Distribution (Open Orders)",
                                      color_discrete_sequence=[COLOR_PRIMARY]),
                         use_container_width=True)
 
-    # Order-to-Delivery
+    # Order-to-Delivery Lead Time
     closed_orders = clean_df[clean_df['Order_Status'] == 'Closed'].copy()
+
     closed_orders['Order_to_Delivery_LT'] = (
         closed_orders['Invoice_Dates'] - closed_orders['Po_Date']
     ).dt.days
@@ -284,4 +308,3 @@ if uploaded_file:
 
 else:
     st.info("Please upload your Excel file to start analysis.")
-
