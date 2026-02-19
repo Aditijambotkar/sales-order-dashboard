@@ -83,8 +83,26 @@ if uploaded_file:
     # ======================================================
     # PRODUCT LEVEL CALCULATIONS
     # ======================================================
+    # ------------------------------
+# Safe Date Conversion
+# ------------------------------
 
-    clean_df['Lead_Time'] = (clean_df['Invoice_Dates'] - clean_df['Po_Date']).dt.days
+    clean_df['Po_Date'] = pd.to_datetime(clean_df['Po_Date'], errors='coerce')
+    clean_df['Invoice_Dates'] = pd.to_datetime(clean_df['Invoice_Dates'], errors='coerce')
+
+# ------------------------------
+# Lead Time Calculation
+# ------------------------------
+
+    clean_df['Lead_Time'] = (
+        clean_df['Invoice_Dates'] - clean_df['Po_Date']
+          ).dt.days
+
+# Remove invalid lead times
+    clean_df = clean_df[clean_df['Lead_Time'].notna()]
+    clean_df = clean_df[clean_df['Lead_Time'] >= 0]
+
+    
     clean_df['Schedule_Delay'] = (clean_df['Invoice_Dates'] - clean_df['Scheduled_Date']).dt.days
 
     clean_df['Delivery_Status'] = np.where(
@@ -266,3 +284,4 @@ if uploaded_file:
 
 else:
     st.info("Please upload your Excel file to start analysis.")
+
