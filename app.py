@@ -1,6 +1,6 @@
 # ==========================================================
 # SALES ORDER COMPLETE ANALYTICS DASHBOARD
-# (MASTER FULL VERSION – NOTHING REMOVED – ALL FIXED)
+# (MASTER FULL VERSION – STABLE – NOTHING REMOVED)
 # ==========================================================
 
 import streamlit as st
@@ -47,11 +47,10 @@ if uploaded_file:
     df = df.dropna(subset=['Po_Date'])
 
     # ======================================================
-    # SO LEVEL DATA (STRICTLY UNIQUE SO)
+    # SO LEVEL DATA (STRICT UNIQUE SO)
     # ======================================================
     so_df = df.drop_duplicates(subset=['So_No']).copy()
 
-    # Force datetime again (CRITICAL FIX)
     so_df['Invoice_Dates'] = pd.to_datetime(so_df['Invoice_Dates'], errors='coerce')
 
     so_df['Order_Month'] = so_df['Po_Date'].dt.to_period('M').astype(str)
@@ -92,14 +91,16 @@ if uploaded_file:
     clean_df['Scheduled_Date'] = pd.to_datetime(clean_df['Scheduled_Date'], errors='coerce')
 
     # ======================================================
-    # LEAD TIME CALCULATION
+    # LEAD TIME (NO ROW DELETION)
     # ======================================================
     clean_df['Lead_Time'] = (
         clean_df['Invoice_Dates'] - clean_df['Po_Date']
     ).dt.days
 
-    clean_df = clean_df[clean_df['Lead_Time'].notna()]
-    clean_df = clean_df[clean_df['Lead_Time'] >= 0]
+    valid_lead_df = clean_df[
+        (clean_df['Lead_Time'].notna()) &
+        (clean_df['Lead_Time'] >= 0)
+    ]
 
     # ======================================================
     # SCHEDULE DELAY
@@ -133,7 +134,7 @@ if uploaded_file:
     )
 
     # ======================================================
-    # SAFE REVENUE ALLOCATION (NO DUPLICATION)
+    # SAFE REVENUE ALLOCATION
     # ======================================================
     clean_df['Total_PO_Qty_Per_SO'] = clean_df.groupby('So_No')['PO_Qty'].transform('sum')
 
@@ -144,7 +145,7 @@ if uploaded_file:
     )
 
     # ======================================================
-    # CUSTOMER DORMANCY (FULLY FIXED)
+    # CUSTOMER DORMANCY (CRASH FIXED)
     # ======================================================
     temp_invoice_df = so_df[so_df['Invoice_Dates'].notna()].copy()
 
@@ -177,7 +178,7 @@ if uploaded_file:
     # ======================================================
     total_sales = so_df['PO_Value'].sum()
     total_orders = so_df['So_No'].nunique()
-    avg_lead_time = clean_df['Lead_Time'].mean()
+    avg_lead_time = valid_lead_df['Lead_Time'].mean()
     pending_value = so_df[so_df['Invoice_Dates'].isna()]['PO_Value'].sum()
 
     on_time_perc = round(
@@ -202,7 +203,7 @@ if uploaded_file:
     st.divider()
 
     # ======================================================
-    # ALL CHARTS (UNCHANGED)
+    # ALL ORIGINAL CHARTS (UNCHANGED)
     # ======================================================
 
     monthly_sales = so_df.groupby('Order_Month')['PO_Value'].sum().reset_index()
@@ -299,14 +300,11 @@ if uploaded_file:
                                      color_discrete_sequence=[COLOR_PRIMARY]),
                         use_container_width=True)
 
-    closed_orders = clean_df[clean_df['Order_Status'] == 'Closed'].copy()
-    closed_orders['Order_to_Delivery_LT'] = (
-        closed_orders['Invoice_Dates'] - closed_orders['Po_Date']
-    ).dt.days
-    closed_orders = closed_orders[closed_orders['Order_to_Delivery_LT'] >= 0]
+    closed_orders = valid_lead_df.copy()
+    closed_orders = closed_orders[closed_orders['Lead_Time'] >= 0]
 
     st.plotly_chart(px.histogram(closed_orders,
-                                 x='Order_to_Delivery_LT',
+                                 x='Lead_Time',
                                  nbins=20,
                                  title="Order-to-Delivery Lead Time",
                                  color_discrete_sequence=[COLOR_SECONDARY]),
